@@ -160,6 +160,9 @@ module.exports.recognize = (data) => {
       baseData;
     const camera = baseData.camera.toLowerCase();
 
+    const { MATCH, UNKNOWN } = config.detect(camera);
+    const filteredUnknowns = unknowns.filter((u) => u.confidence >= UNKNOWN.CONFIDENCE);
+
     const payload = {
       base: {
         id,
@@ -171,13 +174,13 @@ module.exports.recognize = (data) => {
         token,
       },
     };
-    payload.unknown = { ...payload.base, unknown: unknowns[0], unknowns };
+    payload.unknown = { ...payload.base, unknown: filteredUnknowns[0], unknowns: filteredUnknowns };
     payload.match = { ...payload.base };
     payload.camera = {
       ...payload.base,
       matches,
       misses,
-      unknowns,
+      unknowns: filteredUnknowns,
       personCount: counts.person,
       counts,
     };
@@ -200,7 +203,7 @@ module.exports.recognize = (data) => {
       message: counts.person.toString(),
     });
 
-    if (unknowns.length) {
+    if (filteredUnknowns.length) {
       messages.push({
         topic: `${MQTT.TOPICS.MATCHES}/unknown`,
         retain: false,
@@ -269,7 +272,7 @@ module.exports.recognize = (data) => {
       }
     });
 
-    if (matches.length || misses.length || unknowns.length) {
+    if (matches.length || filteredUnknowns.length) {
       messages.push({
         topic: `${MQTT.TOPICS.CAMERAS}/${camera}`,
         retain: false,
